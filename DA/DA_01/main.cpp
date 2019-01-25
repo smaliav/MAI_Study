@@ -7,11 +7,11 @@
 int main(){
     unsigned long long key, maxKey = 0, value;
     
-    TVector *input = new TVector(); //EDIT, PUT THIS IN THE CONSTRUCTOR
-    TVector *output = new TVector(); //EDIT, PUT THIS IN THE CONSTRUCTOR
+    TVector *input = new TVector();
+    TVector *output = new TVector();
 
-    input->CreateVector(); //EDIT, PUT THIS FUNCTION IN THE CONSTRUCTOR
-    output->CreateVector(); //EDIT, PUT THIS FUNCTION IN THE CONSTRUCTOR
+    input->CreateVector();
+    output->CreateVector();
 
     while(std::cin >> key >> value){
         if(key > maxKey) {
@@ -21,7 +21,7 @@ int main(){
         input->AddItem(cell);
     }
 
-    input->CopyVector(input, output); //EDIT, NOT NECCESSARY ACTIONS INCLUDED
+    input->CopyVector(input, output);
     
     RadixSort(input, maxKey, output);
     output->PrintVector();
