@@ -1,1 +1,1 @@
-Laboratory works during my education at MAI.
+# Лабораторные работы во время моего обучения в МАИ #
