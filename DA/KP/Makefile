@@ -7,4 +7,4 @@ kp:
 	$(CC) $(FLAGS) -o $(PROG) $(FILES)
 
 clean:
-	rm -f *.o tc
+	rm -f *.o kp
