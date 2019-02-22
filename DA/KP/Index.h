@@ -6,19 +6,26 @@
 #include <utility>
 #include <vector>
 #include <unordered_set>
-#include <iostream>
 #include <fstream>
+#include <cstdlib>
+#include <iostream>
 
 class TIndex {
 public:
     void IndexAll(std::string &inputName);
-    bool GetName(std::wifstream &input);
     void Print();
+    void SaveIndexes(std::string &outputName);
+    void LoadIndexes(std::string &indexName);
+    bool HasWord(const std::wstring &word);
+
+    friend class TQueries;
 
 private:
+    bool GetName(std::wifstream &input);
     void Index(uint32_t n, std::wifstream &input);
     std::vector<std::wstring> names;
-    std::unordered_multimap<std::wstring, uint32_t> indexes;
+    std::unordered_map<std::wstring, std::vector<uint32_t>> indexes;
+    uint32_t textsCnt;
 };
 
 #endif

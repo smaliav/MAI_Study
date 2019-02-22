@@ -1,12 +1,10 @@
 CC = g++
-FLAGS = -std=c++11 -O3 -o
-FILES = main.cpp TIndex.cpp
-PROG_NAME = kp
-
-all: kp
+FLAGS = -std=c++11 -O3 -g -pedantic -Wall -Wno-sign-compare -Wno-long-long -lm
+FILES =  main.cpp Query.cpp Index.cpp
+PROG = kp
 
 kp:
-	$(CC) $(FLAGS) $(PROG_NAME) $(FILES)
+	$(CC) $(FLAGS) -o $(PROG) $(FILES)
 
 clean:
-	rm -f *.o kp
+	rm -f *.o tc
