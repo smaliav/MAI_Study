@@ -1,6 +1,12 @@
 #include "Query.h"
 
-TQueries::TQueries() {};
+TQueries::TQueries() {}
+
+std::wstring StringToWstring(const std::string &t_str) {
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+
+    return converter.from_bytes(t_str);
+}
 
 TQueries::TQueries(std::string &inputName) {
     std::wifstream input((inputName).c_str());
@@ -128,12 +134,6 @@ void TQueries::PrintParsedQueries() {
     }
 }
 
-std::wstring StringToWstring(const std::string &t_str) {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-
-    return converter.from_bytes(t_str);
-}
-
 void TQueries::Search(std::string &indexName, TIndex &idx) {
     std::vector<uint32_t> tmpSet;
     std::vector<uint32_t> workSet1;
@@ -149,7 +149,7 @@ void TQueries::Search(std::string &indexName, TIndex &idx) {
     // Making operations with sets of matching texts
     for (const auto &query: queries) {
         for (const auto &elem: query) {
-            if (elem == StringToWstring(std::string("&"))) {
+            if (elem == L"&") {
                 // Intersection of sets
                 workSet1 = setsStack.top();
                 setsStack.pop();
@@ -167,7 +167,7 @@ void TQueries::Search(std::string &indexName, TIndex &idx) {
                 workSet2.clear();
                 tmpSet.clear();
             }
-            else if (elem == StringToWstring(std::string("|"))) {
+            else if (elem == L"|") {
                 // Union of sets
                 workSet1 = setsStack.top();
                 setsStack.pop();
@@ -185,7 +185,7 @@ void TQueries::Search(std::string &indexName, TIndex &idx) {
                 workSet2.clear();
                 tmpSet.clear();
             }
-            else if (elem == StringToWstring(std::string("~"))) {
+            else if (elem == L"~") {
                 // Difference of sets
 
                 workSet1 = setsStack.top();
