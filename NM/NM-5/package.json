@@ -1,0 +1,15 @@
+{
+  "name": "nm-5",
+  "version": "1.0.0",
+  "description": "Numeric Methods Lab 5",
+  "main": "main.js",
+  "scripts": {
+    "test": "",
+    "start": "electron ."
+  },
+  "author": "Andrey Smaliy <smaliav@mail.ru>",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^6.0.12"
+  }
+}
