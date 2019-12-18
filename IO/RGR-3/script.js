@@ -3,14 +3,8 @@ function calculateDE(D, e) {
     e--;
 
     D.forEach((row, i) => {
-        let newRow = [];
-
-        row.forEach((elem, j) => {
-            let newElem = D[i][e] + D[e][j];
-            newRow.push(newElem);
-        });
-
-        res.push(newRow);
+        let newRow = row.map((value, j) => D[i][e] + D[e][j]);
+        res.push(newRow)
     });
 
     return res;
