@@ -1,13 +1,13 @@
 #include <stdio.h>
 
-#define CSC(call)												\
-do {															\
-	cudaError_t res = call;										\
-	if (res != cudaSuccess) {									\
-		fprintf(stderr, "ERROR: file:%s line:%d message:%s\n",	\
-				__FILE__, __LINE__, cudaGetErrorString(res));	\
-		exit(0);												\
-	}															\
+#define CSC(call) \
+do { \
+	cudaError_t res = call; \
+	if (res != cudaSuccess) { \
+		fprintf(stderr, "ERROR: file:%s line:%d message:%s\n", \
+				__FILE__, __LINE__, cudaGetErrorString(res)); \
+		exit(0); \
+	} \
 } while (0)
 
 typedef struct image {
