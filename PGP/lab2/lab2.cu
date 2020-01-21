@@ -72,7 +72,7 @@ __global__ void gaussianBlurKernel(uchar4* data,
             float weight = 0.0;
 
             for (k = -r; k <= r; k++) {
-                weight = exp((float)-(k * k) / (float)(2 * r * r));
+                weight = exp(-(float)(k * k) / (float)(2 * r * r));
                 
                 int posX = pos(i + (k * axisX), w);
                 int posY = pos(j + (k * axisY), h);
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
         float div = 0.0;
         
         for (int i = -r; i <= r; i++) {
-            div += exp((float)-(i * i) / (float)(2 * r * r));
+            div += exp(-(float)(i * i) / (float)(2 * r * r));
         }
 
         gaussianBlurKernel<<<gridSize, blockSize>>>(tmpData, r, div, img->w, img->h, 1, 0);
