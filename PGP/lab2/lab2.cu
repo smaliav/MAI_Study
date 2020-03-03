@@ -11,9 +11,9 @@ do { \
 } while (0)
 
 typedef struct image {
-    int w;
-    int h;
-    uchar4* data;
+    int width;
+    int height;
+    uchar4* pixels;
 } image;
 
 image* readImage(const char* filename) {
@@ -21,11 +21,11 @@ image* readImage(const char* filename) {
     
     FILE* input = fopen(filename, "rb");
 
-    fread(&img->w, sizeof(img->w), 1, input);
-    fread(&img->h, sizeof(img->h), 1, input);
+    fread(&img->width, sizeof(img->width), 1, input);
+    fread(&img->height, sizeof(img->height), 1, input);
     
-    img->data = (uchar4 *)malloc(sizeof(uchar4) * img->h * img->w);
-    fread(&img->data, sizeof(img->data), img->h * img->w, input);
+    img->pixels = (uchar4 *)malloc(sizeof(uchar4) * img->height * img->weight);
+    fread(&img->pixels, sizeof(img->pixels), img->height * img->weight, input);
 
     fclose(input);
 
@@ -35,24 +35,24 @@ image* readImage(const char* filename) {
 void writeImage(char* filename, image* img) {
     FILE* output = fopen(filename, "wb");
 
-    fwrite(&img->w, sizeof(img->w), 1, output);
-    fwrite(&img->h, sizeof(img->h), 1, output);
-    fwrite(&img->data, sizeof(img->data), img->h * img->w, output);
+    fwrite(&img->width, sizeof(img->width), 1, output);
+    fwrite(&img->height, sizeof(img->height), 1, output);
+    fwrite(&img->pixels, sizeof(img->pixels), img->height * img->width, output);
 
     fclose(output);
 }
 
 void deleteImage(image* img) {
-    free(img->data);
+    free(img->pixels);
     free(img);
     img = NULL;
 }
 
-__global__ void gaussianBlurKernel(uchar4* data,
+__global__ void gaussianBlurKernel(uchar4* pixels,
                                    int r,
                                    float div,
-                                   int w,
-                                   int h,
+                                   int width,
+                                   int height,
                                    int axisX,
                                    int axisY) {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -61,10 +61,10 @@ __global__ void gaussianBlurKernel(uchar4* data,
     int offsetY = blockDim.y * gridDim.y;
 
     int i, j, k;
-    uchar4 pxl;
+    uchar4 pixel;
 
-    for (i = idx; i < w, i += offsetX) {
-        for (j = idy; j < h, j += offsetY) {
+    for (i = idx; i < width, i += offsetX) {
+        for (j = idy; j < height, j += offsetY) {
             float r = 0.0,
                   g = 0.0,
                   b = 0.0;
@@ -74,14 +74,14 @@ __global__ void gaussianBlurKernel(uchar4* data,
             for (k = -r; k <= r; k++) {
                 weight = exp(-(float)(k * k) / (float)(2 * r * r));
                 
-                int posX = pos(i + (k * axisX), w);
-                int posY = pos(j + (k * axisY), h);
+                int posX = pos(i + (k * axisX), width);
+                int posY = pos(j + (k * axisY), height);
 
-                pxl = tex2D(tex, (float)posX, (float)posY);
+                pixel = tex2D(tex, (float)posX, (float)posY);
 
-                r += (p.x) * weight;
-                g += (p.y) * weight;
-                b += (p.z) * weight;
+                r += (pixel.x) * weight;
+                g += (pixel.y) * weight;
+                b += (pixel.z) * weight;
             }
 
             data = make_uchar4((unsigned char)(r / div),
@@ -93,7 +93,7 @@ __global__ void gaussianBlurKernel(uchar4* data,
 }
 
 __device__ __host__ int pos(int i, int border) {
-    return max(0, min(i, border));
+    return max(min(i, border), 0);
 }
 
 texture <uchar4, 2, cudaReadModeElementType> tex;
@@ -109,10 +109,11 @@ int main(int argc, char* argv[]) {
 
     image* img = readImage(srcFilename);
 
-    cudaArray *cuArr;
+    cudaArray *cudaArr;
     cudaChannelFormatDesc channel = cudaCreateChannelDesc<uchar4>();
-    CSC(cudaMallocArray(&cuArr, &channel, img->w, img->h));
-    CSC(cudaMemcpyToArray(cuArr, 0, 0, img->data, sizeof(uchar4) * img->h * img->w, cudaMemcpyHostToDevice));
+    CSC(cudaMallocArray(&cudaArr, &channel, img->width, img->height));
+    CSC(cudaMemcpyToArray(cudaArr, 0, 0, img->pixels,
+        sizeof(uchar4) * img->height * img->width, cudaMemcpyHostToDevice));
 
     tex.addressMode[0] = cudaAddressModeClamp;
     tex.addressMode[1] = cudaAddressModeClamp;
@@ -123,9 +124,9 @@ int main(int argc, char* argv[]) {
     dim3 gridSize(32, 32);
     dim3 blockSize(32, 32);
 
-    cudaBindTextureToArray(tex, cuArr, channel);
+    cudaBindTextureToArray(tex, cudaArr, channel);
     uchar4* tmpData;
-    cudaMalloc(&tmpData, sizeof(uchar4) * img->h * img->w);
+    cudaMalloc(&tmpData, sizeof(uchar4) * img->height * img->width);
 
     if (r > 0) {
         float div = 0.0;
@@ -134,26 +135,26 @@ int main(int argc, char* argv[]) {
             div += exp(-(float)(i * i) / (float)(2 * r * r));
         }
 
-        gaussianBlurKernel<<<gridSize, blockSize>>>(tmpData, r, div, img->w, img->h, 1, 0);
+        gaussianBlurKernel<<<gridSize, blockSize>>>(tmpData, r, div, img->width, img->height, 1, 0);
         CSC(cudaGetLastError());
 
         CSC(cudaDeviceSynchronize());
 
-        CSC(cudaMemcpy(img->data, tmpData, sizeof(uchar4) * img->h * img->h, cudaMemcpyDeviceToHost));
-        CSC(cudaMemcpyToArray(cuArr, 0, 0, img->data, sizeof(uchar4) * img->h * img->w, cudaMemcpyHostToDevice));
+        CSC(cudaMemcpy(img->pixels, tmpData, sizeof(uchar4) * img->height * img->width, cudaMemcpyDeviceToHost));
+        CSC(cudaMemcpyToArray(cudaArr, 0, 0, img->pixels, sizeof(uchar4) * img->height * img->width, cudaMemcpyHostToDevice));
 
-        gaussianBlurKernel<<<gridSize, blockSize>>>(tmpData, r, div, img->w, img->h, 0, 1);
+        gaussianBlurKernel<<<gridSize, blockSize>>>(tmpData, r, div, img->width, img->height, 0, 1);
         CSC(cudaGetLastError());
 
         CSC(cudaDeviceSynchronize());
 
-        CSC(cudaMemcpy(img->data, tmpData, sizeof(uchar4) * img->h * img->w, cudaMemcpyDeviceToHost));
+        CSC(cudaMemcpy(img->pixels, tmpData, sizeof(uchar4) * img->height * img->width, cudaMemcpyDeviceToHost));
     }
 
     writeImage(resFilename, img);
 
     CSC(cudaUnbindTexture(tex));
-    CSC(cudaFreeArray(cuArr));
+    CSC(cudaFreeArray(cudaArr));
     CSC(cudaFree(tmpData));
 
     deleteImage(img);
