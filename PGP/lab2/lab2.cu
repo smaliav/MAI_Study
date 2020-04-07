@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <iostream>
 
 #define CSC(call) \
 do { \
@@ -10,7 +11,7 @@ do { \
 	} \
 } while (0)
 
-typedef struct image {
+typedef struct _image {
     int width;
     int height;
     uchar4* pixels;
@@ -23,21 +24,21 @@ image* readImage(const char* filename) {
 
     fread(&img->width, sizeof(img->width), 1, input);
     fread(&img->height, sizeof(img->height), 1, input);
-    
-    img->pixels = (uchar4 *)malloc(sizeof(uchar4) * img->height * img->weight);
-    fread(&img->pixels, sizeof(img->pixels), img->height * img->weight, input);
 
+    img->pixels = (uchar4 *)malloc(sizeof(uchar4) * img->height * img->width);
+    fread(img->pixels, sizeof(img->pixels), img->height * img->width, input);
+    
     fclose(input);
 
     return img;
 }
 
-void writeImage(char* filename, image* img) {
+void writeImage(const char* filename, const image* img) {
     FILE* output = fopen(filename, "wb");
 
     fwrite(&img->width, sizeof(img->width), 1, output);
     fwrite(&img->height, sizeof(img->height), 1, output);
-    fwrite(&img->pixels, sizeof(img->pixels), img->height * img->width, output);
+    fwrite(img->pixels, sizeof(img->pixels), img->height * img->width, output);
 
     fclose(output);
 }
@@ -48,8 +49,14 @@ void deleteImage(image* img) {
     img = NULL;
 }
 
+texture<uchar4, 2, cudaReadModeElementType> tex;
+
+__device__ __host__ int pos(int i, int border) {
+    return max(min(i, border), 0);
+}
+
 __global__ void gaussianBlurKernel(uchar4* pixels,
-                                   int r,
+                                   int rad,
                                    float div,
                                    int width,
                                    int height,
@@ -63,16 +70,16 @@ __global__ void gaussianBlurKernel(uchar4* pixels,
     int i, j, k;
     uchar4 pixel;
 
-    for (i = idx; i < width, i += offsetX) {
-        for (j = idy; j < height, j += offsetY) {
+    for (i = idx; i < width; i += offsetX) {
+        for (j = idy; j < height; j += offsetY) {
             float r = 0.0,
                   g = 0.0,
                   b = 0.0;
 
             float weight = 0.0;
 
-            for (k = -r; k <= r; k++) {
-                weight = exp(-(float)(k * k) / (float)(2 * r * r));
+            for (k = -rad; k <= rad; k++) {
+                weight = exp(-(float)(k * k) / (float)(2 * rad * rad));
                 
                 int posX = pos(i + (k * axisX), width);
                 int posY = pos(j + (k * axisY), height);
@@ -84,7 +91,7 @@ __global__ void gaussianBlurKernel(uchar4* pixels,
                 b += (pixel.z) * weight;
             }
 
-            data = make_uchar4((unsigned char)(r / div),
+            pixels[i + j * width] = make_uchar4((unsigned char)(r / div),
                                (unsigned char)(g / div),
                                (unsigned char)(b / div),
                                (float)0.0);
@@ -92,20 +99,23 @@ __global__ void gaussianBlurKernel(uchar4* pixels,
     }
 }
 
-__device__ __host__ int pos(int i, int border) {
-    return max(min(i, border), 0);
+void printPixels(uchar4* arr, int size) {
+    for (int i = 0; i < size; i++) {
+        std::cout << (float)arr[i].x << " " << (float)arr[i].y << " " << (float)arr[i].z << std::endl;
+    }
 }
-
-texture <uchar4, 2, cudaReadModeElementType> tex;
 
 int main(int argc, char* argv[]) {
     int r;                  // Filter radius
     char srcFilename[256];
     char resFilename[256];
+    
+    dim3 gridSize(32, 32);
+    dim3 blockSize(32, 32);
 
     scanf("%s", srcFilename);
     scanf("%s", resFilename);
-    scanf("%d", r);
+    scanf("%d", &r);
 
     image* img = readImage(srcFilename);
 
@@ -121,10 +131,8 @@ int main(int argc, char* argv[]) {
     tex.filterMode = cudaFilterModePoint;
     tex.normalized = false;
 
-    dim3 gridSize(32, 32);
-    dim3 blockSize(32, 32);
-
     cudaBindTextureToArray(tex, cudaArr, channel);
+
     uchar4* tmpData;
     cudaMalloc(&tmpData, sizeof(uchar4) * img->height * img->width);
 
@@ -149,6 +157,7 @@ int main(int argc, char* argv[]) {
         CSC(cudaDeviceSynchronize());
 
         CSC(cudaMemcpy(img->pixels, tmpData, sizeof(uchar4) * img->height * img->width, cudaMemcpyDeviceToHost));
+        // printPixels(img->pixels, img->height * img->width);
     }
 
     writeImage(resFilename, img);
