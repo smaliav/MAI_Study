@@ -34,7 +34,6 @@ __global__ void subtractProductKernel(double *mtx, int size, int i) {
     for (int j = idX + i + 1; j < size; j += offsetX) {
         for (int k = idY + i + 1; k < size; k += offsetY) {
             mtx[pos2Dto1D(j, k, size)] -= mtx[pos2Dto1D(j, i, size)] * mtx[pos2Dto1D(i, k, size)];
-            // mtx[k * size + j] -= mtx[i * size + j] * mtx[k * size + i];
         }
     }
 }
@@ -45,7 +44,6 @@ __global__ void divideKernel(double *mtx, int size, int columnIdx) {
 
     while (idX < size) {
         mtx[pos2Dto1D(idX, columnIdx, size)] /= mtx[pos2Dto1D(columnIdx, columnIdx, size)];
-        // mtx[size * columnIdx + idX] /= mtx[size * columnIdx + columnIdx];
         idX += offsetX;
     }
 }
