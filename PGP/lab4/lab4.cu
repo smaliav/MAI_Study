@@ -163,6 +163,8 @@ int main(int argc, const char **argv) {
     printAnswer(mtx, p, size);
 
     CSC(cudaFree(cudaMtx));
+    free(mtx);
+    free(p);
 
     return 0;
 }
