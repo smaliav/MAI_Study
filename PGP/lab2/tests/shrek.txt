@@ -1,0 +1,3 @@
+ins/shrek_in.data
+outs/shrek_out.data
+3

@@ -17,22 +17,6 @@ typedef struct _image {
     uchar4* pixels;
 } image;
 
-image* readImage(const char* filename) {
-    image* img = (image *)malloc(sizeof(image));
-    
-    FILE* input = fopen(filename, "rb");
-
-    fread(&img->width, sizeof(img->width), 1, input);
-    fread(&img->height, sizeof(img->height), 1, input);
-
-    img->pixels = (uchar4 *)malloc(sizeof(uchar4) * img->height * img->width);
-    fread(img->pixels, sizeof(img->pixels), img->height * img->width, input);
-    
-    fclose(input);
-
-    return img;
-}
-
 void writeImage(const char* filename, const image* img) {
     FILE* output = fopen(filename, "wb");
 
@@ -49,11 +33,27 @@ void deleteImage(image* img) {
     img = NULL;
 }
 
-texture<uchar4, 2, cudaReadModeElementType> tex;
+image* readImage(const char* filename) {
+    image* img = (image *)malloc(sizeof(image));
+    
+    FILE* input = fopen(filename, "rb");
+
+    fread(&img->width, sizeof(img->width), 1, input);
+    fread(&img->height, sizeof(img->height), 1, input);
+
+    img->pixels = (uchar4 *)malloc(sizeof(uchar4) * img->height * img->width);
+    fread(img->pixels, sizeof(img->pixels), img->height * img->width, input);
+    
+    fclose(input);
+
+    return img;
+}
 
 __device__ __host__ int pos(int i, int border) {
     return max(min(i, border), 0);
 }
+
+texture<uchar4, 2, cudaReadModeElementType> tex;
 
 __global__ void gaussianBlurKernel(uchar4* pixels,
                                    int rad,
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
     int r;                  // Filter radius
     char srcFilename[256];
     char resFilename[256];
-    
+
     dim3 gridSize(32, 32);
     dim3 blockSize(32, 32);
 
