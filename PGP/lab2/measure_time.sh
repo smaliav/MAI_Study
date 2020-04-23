@@ -1,9 +1,14 @@
-start=`date +%N`
+for file in tests/*
+do
 
-./lab2 <image.txt
+start=`date +%s%N`
 
-end=`date +%s`
+./lab2 <$file
+
+end=`date +%s%N`
 
 let "res = (end - start) / 1000000"
 
-echo $res
+echo $file $res
+
+done
